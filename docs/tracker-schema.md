@@ -111,15 +111,30 @@ These are real, observed in the 5-lead sample. The skill must handle each.
    by `user_id` mislabels every lead reply as closer-authored. Always split
    with the `direction` filter (`inbound` / `outbound`).
 
-3. **Ghost duplicate meetings.** Anthony had a second Sep 4 meeting
-   ("Anthony Mariani and Ezra Isla", 10:00am ET) that the setter told him to
-   cancel; it was never marked cancelled. Naive counting sees two discovery
-   calls. De-duplicate by closer `user_id` + proximity.
+3. **Ghost duplicate meetings from departed reps.** Anthony had a second
+   Sep 4 meeting ("Anthony Mariani and Ezra Isla", 10:00am ET) that the setter
+   told him to cancel; it was never marked cancelled. Ezra has left the
+   company, and his calls were being cancelled and reassigned — Harry took
+   this one over. Naive counting sees two discovery calls.
+
+   **Primary rule:** the first-call meeting must have
+   `user_id == target closer`. The Ezra record fails this outright, so no
+   proximity heuristic is needed. Apply this before any de-duplication.
+
+   **Secondary signal:** a meeting whose `user_id` is absent from the active
+   `org_users` roster belongs to a departed rep (Ezra's
+   `user_IZsgcW3rxd1herqkr9P2OIkDvzekDImciId3Ni6nh4e` is not in the roster).
+   Use this only to *annotate* the row — "duplicate booking with a departed
+   rep ignored" — never as an exclusion rule on its own: a closer who has
+   since left the company would otherwise return zero rows, making historical
+   analysis impossible.
 
 4. **Calendly email subject times are not ET.** Anthony's follow-up subject
    reads "11:00 Mon, 14 Sep 2026" while the meeting is 16:00 UTC = 12:00pm ET
    and the closer's own SMS says "Monday 12 pm EST". Never parse times from
    email subjects — use meeting `starts_at` converted to America/New_York.
+   Confirmed with Sheila 2026-09-10: the subject line was the source of the
+   discrepancy in her manual read, and is not a reliable source.
 
 5. **Stage changes are not always the closer's.** Will Morgan's move was made
    by Helen Guo. Record the actor.
