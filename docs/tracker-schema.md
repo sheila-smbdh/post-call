@@ -163,3 +163,23 @@ exposes recording objects that the OAuth connector hides.
 
 The API key is read from the `CLOSE_API_KEY` environment variable. It is
 never written to source, config, or any commit.
+
+### Egress constraint (tested 2026-09-10)
+
+`api.close.com` is **blocked by the organization egress policy** in the Claude
+Code remote environment. The proxy rejects the CONNECT tunnel with 403
+(`connect_rejected`, host `api.close.com:443`), while a control request to
+`api.github.com` returns 200 — so this is host-specific policy, not a network
+fault, and not a bad key.
+
+Consequences for the skill's design:
+
+- The skill **cannot depend on the Close REST API** when run from a Claude
+  Code web/remote session. Only the OAuth MCP connector is reachable, and
+  that connector does not expose recording objects.
+- Using the REST API would require adding `api.close.com` to the environment's
+  allowed hosts in the network policy. Until that happens, the REST route is
+  unavailable regardless of whether a valid key exists.
+- Therefore the **hybrid duration approach is the default design**, with the
+  REST path kept as an optional enhancement guarded behind a reachability
+  check that degrades gracefully rather than erroring.
