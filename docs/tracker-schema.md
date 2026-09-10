@@ -102,10 +102,14 @@ that call. Earlier setter/intro-call activity is context, not measurement.
 
 These are real, observed in the 5-lead sample. The skill must handle each.
 
-1. **`duration` is scheduled, not actual.** Close's meeting object exposes
-   exactly one duration field and it returns the booked Calendly length
-   (2700s = 45m) for every call, including the one that actually ran 1h11m.
-   There is no `ends_at`, no recordings field.
+1. **`duration` is scheduled, not actual — and so is `ends_at`.** Via the MCP
+   connector, the meeting object exposes one duration field returning the
+   booked Calendly length (2700s = 45m). Via the REST API, `ends_at` is
+   likewise just `starts_at + duration` (13:45 for a call that ran to 14:11),
+   and the top-level `actual_duration` field exists but is **empty**.
+
+   Actual duration lives in `integrations[].integration_data` — see
+   "Actual call duration", below.
 
 2. **`user_id` on inbound messages is the closer, not the sender.** Filtering
    by `user_id` mislabels every lead reply as closer-authored. Always split
@@ -145,7 +149,55 @@ These are real, observed in the 5-lead sample. The skill must handle each.
 
 ---
 
-## Open question — actual call duration
+## Actual call duration — RESOLVED 2026-09-10
+
+Actual duration **is** retrievable, but only through the Close REST API, and
+only from a nested field the MCP connector does not project.
+
+`GET /api/v1/activity/meeting/{id}/` → `integrations[]` → the entry with
+`integration_name == "zoom"` → `integration_data`:
+
+```json
+{
+  "start_time": "2026-09-04T12:59:31+00:00",
+  "end_time":   "2026-09-04T14:11:22+00:00",
+  "duration":   72,
+  "participants": [
+    {"zoom_id": "rZO_-CF-SdSATRK3TuacaA", "name": "Harry Whyte"},
+    {"zoom_id": "", "name": "anthony"},
+    {"zoom_id": "", "name": "anthony"}
+  ],
+  "processing_status": "processing"
+}
+```
+
+### Rules
+
+- **Compute duration as `end_time - start_time`**, not from the `duration`
+  field. For the reference call that is 71m51s, while `duration` reports 72 —
+  it is rounded. The Close UI shows "1h 11m" (truncated). All three describe
+  the same call; only the computed value is exact.
+- **Do not gate on `processing_status`.** It still read `"processing"` six days
+  after the call. Treat the timing data as usable as soon as it is present.
+- **De-duplicate `participants` by name.** The reference call lists "anthony"
+  twice — a rejoin or second device — which would otherwise inflate attendee
+  counts.
+- **`participants` is an independent attendance signal.** It shows who really
+  joined the Zoom, regardless of stage labels, so it can catch a booked call
+  where the lead never appeared.
+- Fall back to the Granola/hybrid path when the zoom integration entry is
+  absent, rather than dropping the lead.
+
+### Fields that exist but are empty (do not design around them)
+
+Confirmed empty on the reference meeting: `actual_duration`, `user_note`,
+`user_note_html`, `outcome_id`, `outcome_reason`,
+`outcome_autofill_reasoning`, `summary`, `notetaker_id`, `attached_call_ids`,
+`attendees`. Useful only if the organization later starts populating them.
+
+---
+
+## Superseded — earlier open question on duration
 
 Sheila's original gate is "the call must have run >15 minutes to count as a
 real discovery call." Actual duration is visible in the Close **UI** as Zoom
