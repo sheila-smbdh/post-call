@@ -25,78 +25,82 @@ that call. Earlier setter/intro-call activity is context, not measurement.
 
 ---
 
-## Columns
+## Columns (27)
 
-### A. Identity (6)
+Trimmed from an initial 39 on 2026-09-10. Cuts are listed at the end of this
+section with reasons, so nothing is silently dropped.
+
+### A. Identity (4)
 | # | Column | Source |
 |---|---|---|
-| 1 | Closer | opportunity `user_name` |
-| 2 | Lead Name | contact `contact_name` |
-| 3 | Close Lead URL | built from `lead_id` |
-| 4 | Current Stage | opportunity `status_label` |
-| 5 | Setter / Booked By | earlier intro-call meeting `user_id` |
-| 6 | Extract Date | run timestamp |
+| 1 | Lead Name | contact `contact_name` |
+| 2 | Close Lead URL | built from `lead_id` |
+| 3 | Current Stage | opportunity `status_label` |
+| 4 | Setter / Booked By | earlier intro-call meeting `user_id` |
 
-### B. The first discovery call (7)
-| # | Column | Source | Note |
-|---|---|---|---|
-| 7 | Call Date (ET) | meeting `starts_at` → America/New_York | |
-| 8 | Call Time (ET) | same | |
-| 9 | Day of Week | derived | |
-| 10 | Scheduled Duration (min) | meeting `duration` / 60 | always 45 in sample |
-| 11 | **Actual Duration (min)** | **PENDING API-key test** | see Open Question |
-| 12 | Duration Source | `zoom-api` / `granola-proxy` / `manual` / `unavailable` | audit trail |
-| 13 | Transcript Word Count | Granola transcript | 12,843 for Anthony |
+### B. The first discovery call (5)
+| # | Column | Source |
+|---|---|---|
+| 5 | Call Date + Time (ET) | meeting `starts_at` → America/New_York |
+| 6 | Scheduled Duration (min) | meeting `duration` / 60 |
+| 7 | **Actual Duration (min)** | zoom `end_time - start_time`, exact |
+| 8 | Qualified Call? (>15 min) | the eligibility gate |
+| 9 | Verified Participants | zoom `participants`, de-duplicated by name |
 
-### C. Outcome (5)
+### C. Outcome (3)
 | # | Column | Note |
 |---|---|---|
-| 14 | Stage Before Call | from `opportunity_status_change` |
-| 15 | Stage After Call | |
-| 16 | Stage Change (ET) | |
-| 17 | Lag: Call End → Stage Change | Harry logs same-day in 4/5 |
-| 18 | **Stage Moved By** | Will Morgan's was moved by Helen Guo, not Harry — do not credit the closer blindly |
+| 10 | Stage After Call | |
+| 11 | Lag: Call End → Stage Change | |
+| 12 | Stage Moved By | may not be the closer |
 
-### D. Post-call follow-up — the core (6)
+### D. Post-call follow-up (4)
 | # | Column | Note |
 |---|---|---|
-| 19 | First Post-Call Touch Channel | SMS / email / call |
-| 20 | First Post-Call Touch (ET) | |
-| 21 | **Lag: Call End → First Touch** | Anthony = **7h27m**, not "immediate" |
-| 22 | Post-Call Material Sent? | Y/N + what |
-| 23 | Post-Call Email (ET) | |
-| 24 | Material Described | e.g. "resources + agreement" |
+| 13 | First Post-Call Touch Channel | SMS / email / call |
+| 14 | First Post-Call Touch (ET) | |
+| 15 | **Lag: Call End → First Touch** | the headline metric |
+| 16 | Post-Call Material Sent + What | e.g. "resources + agreement" |
 
-### E. Channel volume (5)
-| # | Column |
-|---|---|
-| 25 | SMS Out / SMS In |
-| 26 | Email Out / Email In |
-| 27 | Follow-up Zoom calls booked |
-| 28 | Phone dials (closer → lead) |
-| 29 | Total Exchanges (Closer n / Lead n) |
+### E. Channel volume (3)
+| # | Column | Format |
+|---|---|---|
+| 17 | SMS Out / In | e.g. "5 / 4" |
+| 18 | Email Out / In | e.g. "2 / 0" |
+| 19 | Total Exchanges | closer n / lead n |
 
-### F. Responsiveness (5)
+### F. Responsiveness (3)
 | # | Column | Note |
 |---|---|---|
-| 30 | Lead First Reply (ET) | |
-| 31 | Closer Median Response Time | Anthony thread: ~3m and ~1h17m |
-| 32 | Closer Fastest Response | 2m53s |
-| 33 | Closer Slowest Response | |
-| 34 | Send Hours (ET) | hour-of-day distribution; Harry confirmed at 5:30pm |
+| 20 | Closer Median Response Time | |
+| 21 | Closer Slowest Response | median + slowest bounds the behavior |
+| 22 | Send Hours (ET) | hour-of-day distribution |
 
 ### G. Chase / recovery (5)
 | # | Column | Note |
 |---|---|---|
-| 35 | Days Call → Closer Re-initiation | Anthony = 4.8 days |
-| 36 | Unanswered Closer Re-touches | measures persistence |
-| 37 | Follow-up Call Booked? | Ari = Sep 28, 11:00am ET |
-| 38 | Exchanges to Book Follow-up | Anthony = 6 |
-| 39 | Who Went Silent Last | closer / lead — the drop-off point |
+| 23 | Days Call → Closer Re-initiation | |
+| 24 | Unanswered Closer Re-touches | persistence |
+| 25 | Follow-up Call Booked + Date (ET) | |
+| 26 | Exchanges to Book Follow-up | |
+| 27 | Who Went Silent Last | the drop-off point |
 
-**39 columns.**
+### Cut, with reasons
 
----
+| Cut | Why |
+|---|---|
+| Closer | Redundant — one tab per closer. Re-add if tabs are ever merged. |
+| Extract Date | Belongs in tab metadata, not repeated on every row. |
+| Day of Week | Derivable in-sheet: `=TEXT(date,"ddd")`. |
+| Transcript Word Count | Was a proxy for duration. Real durations make it redundant. |
+| Duration Source | Was an audit trail for a mixed-provenance column. Now always Zoom. |
+| Zoom Start / Zoom End | Evidence behind Actual Duration; kept in the raw JSON, not the sheet. |
+| Stage Before Call | Nearly always "Discovery Call Scheduled". |
+| Post-Call Email (ET) | Covered by First Touch + Material columns. |
+| Closer Fastest Response | Median and slowest already bound the distribution. |
+| Lead First Reply (ET) | Implied by Total Exchanges and Who Went Silent Last. |
+| Follow-up Zoom calls booked | Merged into "Follow-up Call Booked + Date". |
+| Phone dials | Near-zero volume in the sample; re-add if dials become a real channel. |
 
 ## Verified CRM traps
 
