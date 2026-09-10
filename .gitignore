@@ -1,0 +1,13 @@
+# Secrets — never commit
+.env
+.env.*
+*.key
+close_api_key*
+credentials.json
+token.json
+
+# Scratch
+__pycache__/
+*.pyc
+.DS_Store
+out/
