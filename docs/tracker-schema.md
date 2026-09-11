@@ -229,7 +229,26 @@ These are real, observed in the 5-lead sample. The skill must handle each.
    Never use lead status as the did-it-happen gate — every booked call passes,
    no-shows included. Use the **opportunity** status change instead.
 
-8. **Closers do not write call notes in Close.** All 5 pilot leads have zero
+8. **Calendar notifications pollute inbound email counts.** Calendly and
+   Google Calendar mail (`New Event: …`, `Accepted: …`,
+   `Tentatively Accepted: …`) lands as `activity.email` with
+   `direction: inbound`. In the 5-lead pilot, 17 of 19 inbound emails were
+   these; only 2 were genuine lead replies. Filter them out by subject
+   prefix before counting, or Email In is inflated ~9x.
+
+9. **"Lag: Call End → X" is not computable.** Call end came from Zoom and
+   duration is no longer tracked, so both lag columns measure from the
+   **scheduled** end (`starts_at + duration`). On a call that overran this
+   reads high: Anthony's first touch shows +25m from scheduled end but
+   actually landed 50s *before* the call really finished. Label these
+   columns "Sched End →", never "Call End →".
+
+10. **Duplicate lead records exist.** "Will Morgan" returns two leads; only
+    one (`lead_BdkUT2…`, status "Call in Progress") is the pilot lead, the
+    other is an untouched "Potential". Disambiguate by status and by the
+    presence of a meeting with the closer — never take the first hit.
+
+11. **Closers do not write call notes in Close.** All 5 pilot leads have zero
    `activity.note` records after their discovery call. Anthony's only note is
    from 2026-08-22 by the *setter* (Jordan Kempster), about the intro call.
    The call record lives in Granola. Do not expect notes to corroborate the

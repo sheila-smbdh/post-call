@@ -11,7 +11,7 @@ Fourth skill, separate from `extract-pre-call-behaviors`,
 ## Status — 2026-09-11
 
 Design and feasibility work is **complete and verified against live data**.
-Implementation is **fully unblocked** — ready to build.
+Pilot 1 (Harry Whyte, 5 leads) has been **run end to end**.
 
 Call duration is not tracked. The eligibility gate reads closer-driven CRM
 state after the scheduled time, which answers the only question the analysis
@@ -51,14 +51,15 @@ Harry's user id: `user_f3vkQZe4xJvRsPV9L6cU1UOHk7nwxStq94aMqJYLqzm`
 
 ## Next steps
 
-1. Build extraction: opportunities → first-call meeting → activity trail
-   split by `direction`. Apply the CRM-state gate for eligibility.
-2. Create "Closer Deep Dive Tracker" with a "Harry Whyte" tab, 25 columns.
-3. Run the five pilot leads.
-4. Produce the narrative write-up, stats summary, and HTML report.
+Pilot 1 is **complete** — see `docs/pilot-1-results.md`. Tracker and report
+are both produced. Remaining work:
+
+1. Package the extraction as a reusable skill. The pilot was run by hand;
+   there is no reusable extractor yet.
+2. Extend to the other closers, one tab each.
 
 Read `docs/tracker-schema.md` first — it carries the eligibility gate, the
-column definitions, and eight CRM traps that were confirmed against live
+column definitions, and eleven CRM traps that were confirmed against live
 data. Those traps are the expensive part of this work; do not rediscover
 them.
 
