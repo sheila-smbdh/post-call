@@ -54,26 +54,31 @@ The move is human, and its timing tracks the real call:
 | Ari Brownstein | Sep 9 19:00 | Sep 9 21:52:09 | +2h52m | Harry |
 | Kevin Gindi | Sep 10 20:00 | Sep 10 20:54:39 | +54m | Harry |
 
-Anthony is the control: his call ran 12:59:31 → 14:11:22 (71m51s, established
-via Zoom integration data). The stage moved at **14:10:21 — 61 seconds before
-the call ended**. Harry moved it while still on the call.
+Anthony is the control: his call is independently known to have run
+12:59:31 → 14:11:22. The stage moved at **14:10:21 — 61 seconds before the
+call ended**. Harry moved it while still on the call. (That timing was a
+one-off verification of the gate, not a column the tracker carries.)
 
 **Record the actor and the lag on every row.** Will Morgan's move was made by
 Helen Guo at 11:45pm ET, ~7h after the call — not the closer, and not
 call-coupled. See trap 5.
 
-### What this changes
+### Scope of the gate
 
-Column 8 no longer means "qualified call (>15 min)". It means **the call
-occurred**. A short call that the closer moved straight to `LOST` now passes
-the gate. If a quality threshold is still wanted, it needs Actual Duration,
-which needs the REST API.
+Column 7 answers **did the call occur**, nothing more. The original
+"qualified call (>15 min)" rule is retired: call length is not tracked, so a
+short call the closer moved straight to `LOST` passes the same as a long one.
+
+This is deliberate. Post-call analysis measures what the closer did *after*
+the call — follow-up lag, channel mix, persistence, recovery — and every one
+of those is measurable as soon as the call is known to have happened. Length
+was never an input to them.
 
 ---
 
-## Columns (27)
+## Columns (25)
 
-Trimmed from an initial 39 on 2026-09-10. Cuts are listed at the end of this
+Trimmed from an initial 39 on 2026-09-10, then to 25 on 2026-09-11. Cuts are listed at the end of this
 section with reasons, so nothing is silently dropped.
 
 ### A. Identity (4)
@@ -84,52 +89,50 @@ section with reasons, so nothing is silently dropped.
 | 3 | Current Stage | opportunity `status_label` |
 | 4 | Setter / Booked By | earlier intro-call meeting `user_id` |
 
-### B. The first discovery call (5)
+### B. The first discovery call (3)
 | # | Column | Source |
 |---|---|---|
 | 5 | Call Date + Time (ET) | meeting `starts_at` → America/New_York |
 | 6 | Scheduled Duration (min) | meeting `duration` / 60 |
-| 7 | Actual Duration (min) | zoom `end_time - start_time`, exact. REST API only — blocked |
-| 8 | **Call Happened?** | CRM-state gate — see below. Replaces the >15 min rule |
-| 9 | Verified Participants | zoom `participants`, de-duplicated by name |
+| 7 | **Call Happened?** | CRM-state gate — see below |
 
 ### C. Outcome (3)
 | # | Column | Note |
 |---|---|---|
-| 10 | Stage After Call | |
-| 11 | Lag: Call End → Stage Change | |
-| 12 | Stage Moved By | may not be the closer |
+| 8 | Stage After Call | |
+| 9 | Lag: Call End → Stage Change | |
+| 10 | Stage Moved By | may not be the closer |
 
 ### D. Post-call follow-up (4)
 | # | Column | Note |
 |---|---|---|
-| 13 | First Post-Call Touch Channel | SMS / email / call |
-| 14 | First Post-Call Touch (ET) | |
-| 15 | **Lag: Call End → First Touch** | the headline metric |
-| 16 | Post-Call Material Sent + What | e.g. "resources + agreement" |
+| 11 | First Post-Call Touch Channel | SMS / email / call |
+| 12 | First Post-Call Touch (ET) | |
+| 13 | **Lag: Call End → First Touch** | the headline metric |
+| 14 | Post-Call Material Sent + What | e.g. "resources + agreement" |
 
 ### E. Channel volume (3)
 | # | Column | Format |
 |---|---|---|
-| 17 | SMS Out / In | e.g. "5 / 4" |
-| 18 | Email Out / In | e.g. "2 / 0" |
-| 19 | Total Exchanges | closer n / lead n |
+| 15 | SMS Out / In | e.g. "5 / 4" |
+| 16 | Email Out / In | e.g. "2 / 0" |
+| 17 | Total Exchanges | closer n / lead n |
 
 ### F. Responsiveness (3)
 | # | Column | Note |
 |---|---|---|
-| 20 | Closer Median Response Time | |
-| 21 | Closer Slowest Response | median + slowest bounds the behavior |
-| 22 | Send Hours (ET) | hour-of-day distribution |
+| 18 | Closer Median Response Time | |
+| 19 | Closer Slowest Response | median + slowest bounds the behavior |
+| 20 | Send Hours (ET) | hour-of-day distribution |
 
 ### G. Chase / recovery (5)
 | # | Column | Note |
 |---|---|---|
-| 23 | Days Call → Closer Re-initiation | |
-| 24 | Unanswered Closer Re-touches | persistence |
-| 25 | Follow-up Call Booked + Date (ET) | |
-| 26 | Exchanges to Book Follow-up | |
-| 27 | Who Went Silent Last | the drop-off point |
+| 21 | Days Call → Closer Re-initiation | |
+| 22 | Unanswered Closer Re-touches | persistence |
+| 23 | Follow-up Call Booked + Date (ET) | |
+| 24 | Exchanges to Book Follow-up | |
+| 25 | Who Went Silent Last | the drop-off point |
 
 ### Cut, with reasons
 
@@ -138,9 +141,11 @@ section with reasons, so nothing is silently dropped.
 | Closer | Redundant — one tab per closer. Re-add if tabs are ever merged. |
 | Extract Date | Belongs in tab metadata, not repeated on every row. |
 | Day of Week | Derivable in-sheet: `=TEXT(date,"ddd")`. |
-| Transcript Word Count | Was a proxy for duration. Real durations make it redundant. |
-| Duration Source | Was an audit trail for a mixed-provenance column. Now always Zoom. |
-| Zoom Start / Zoom End | Evidence behind Actual Duration; kept in the raw JSON, not the sheet. |
+| **Actual Duration (min)** | Dropped 2026-09-11. Call length is not needed for post-call analysis — the CRM-state gate establishes that the call happened, which is all the analysis requires. Removed the last REST API dependency. |
+| **Verified Participants** | Dropped 2026-09-11. Sourced from Zoom `participants`, which exists only in the REST response. Unobtainable once REST is out, and attendance is already settled by the gate. |
+| Transcript Word Count | Was a proxy for duration; duration is no longer tracked at all. |
+| Duration Source | Was an audit trail for a column that no longer exists. |
+| Zoom Start / Zoom End | Was evidence behind Actual Duration, which is gone. |
 | Stage Before Call | Nearly always "Discovery Call Scheduled". |
 | Post-Call Email (ET) | Covered by First Touch + Material columns. |
 | Closer Fastest Response | Median and slowest already bound the distribution. |
@@ -152,14 +157,10 @@ section with reasons, so nothing is silently dropped.
 
 These are real, observed in the 5-lead sample. The skill must handle each.
 
-1. **`duration` is scheduled, not actual — and so is `ends_at`.** Via the MCP
-   connector, the meeting object exposes one duration field returning the
-   booked Calendly length (2700s = 45m). Via the REST API, `ends_at` is
-   likewise just `starts_at + duration` (13:45 for a call that ran to 14:11),
-   and the top-level `actual_duration` field exists but is **empty**.
-
-   Actual duration lives in `integrations[].integration_data` — see
-   "Actual call duration", below.
+1. **`duration` is the booked length, not the call's.** The meeting object's
+   `duration` returns the Calendly booking (2700s = 45m), which is why col 6
+   is labelled *Scheduled* Duration. Never present it as how long the call
+   ran. Actual length is no longer tracked — see the cuts table.
 
 2. **`user_id` on inbound messages is the closer, not the sender.** Filtering
    by `user_id` mislabels every lead reply as closer-authored. Always split
@@ -233,92 +234,3 @@ These are real, observed in the 5-lead sample. The skill must handle each.
    from 2026-08-22 by the *setter* (Jordan Kempster), about the intro call.
    The call record lives in Granola. Do not expect notes to corroborate the
    gate.
-
----
-
-## Actual call duration — RESOLVED 2026-09-10
-
-Actual duration **is** retrievable, but only through the Close REST API, and
-only from a nested field the MCP connector does not project.
-
-`GET /api/v1/activity/meeting/{id}/` → `integrations[]` → the entry with
-`integration_name == "zoom"` → `integration_data`:
-
-```json
-{
-  "start_time": "2026-09-04T12:59:31+00:00",
-  "end_time":   "2026-09-04T14:11:22+00:00",
-  "duration":   72,
-  "participants": [
-    {"zoom_id": "rZO_-CF-SdSATRK3TuacaA", "name": "Harry Whyte"},
-    {"zoom_id": "", "name": "anthony"},
-    {"zoom_id": "", "name": "anthony"}
-  ],
-  "processing_status": "processing"
-}
-```
-
-### Rules
-
-- **Compute duration as `end_time - start_time`**, not from the `duration`
-  field. For the reference call that is 71m51s, while `duration` reports 72 —
-  it is rounded. The Close UI shows "1h 11m" (truncated). All three describe
-  the same call; only the computed value is exact.
-- **Do not gate on `processing_status`.** It still read `"processing"` six days
-  after the call. Treat the timing data as usable as soon as it is present.
-- **De-duplicate `participants` by name.** The reference call lists "anthony"
-  twice — a rejoin or second device — which would otherwise inflate attendee
-  counts.
-- **`participants` is an independent attendance signal.** It shows who really
-  joined the Zoom, regardless of stage labels, so it can catch a booked call
-  where the lead never appeared.
-- Fall back to the Granola/hybrid path when the zoom integration entry is
-  absent, rather than dropping the lead.
-
-### Fields that exist but are empty (do not design around them)
-
-Confirmed empty on the reference meeting: `actual_duration`, `user_note`,
-`user_note_html`, `outcome_id`, `outcome_reason`,
-`outcome_autofill_reasoning`, `summary`, `notetaker_id`, `attached_call_ids`,
-`attendees`. Useful only if the organization later starts populating them.
-
----
-
-## Superseded — earlier open question on duration
-
-Sheila's original gate is "the call must have run >15 minutes to count as a
-real discovery call." Actual duration is visible in the Close **UI** as Zoom
-recording assets (Gallery View / Shared Screen / Active Speaker / Audio Only,
-each labelled e.g. "1h 11m") but is **not exposed by the Close MCP
-connector**: the meeting schema has no recordings field, and both
-`fetch_meeting_transcript` and `fetch_call` return Not Found.
-
-Decision: test whether the Close **REST API** (`GET /activity/meeting/{id}`)
-exposes recording objects that the OAuth connector hides.
-
-- If yes → column 11 is populated automatically, `Duration Source = zoom-api`.
-- If no → fall back to the hybrid: Granola transcript presence + word count
-  gates eligibility, and the leads Granola missed are flagged for manual fill.
-
-The API key is read from the `CLOSE_API_KEY` environment variable. It is
-never written to source, config, or any commit.
-
-### Egress constraint (tested 2026-09-10)
-
-`api.close.com` is **blocked by the organization egress policy** in the Claude
-Code remote environment. The proxy rejects the CONNECT tunnel with 403
-(`connect_rejected`, host `api.close.com:443`), while a control request to
-`api.github.com` returns 200 — so this is host-specific policy, not a network
-fault, and not a bad key.
-
-Consequences for the skill's design:
-
-- The skill **cannot depend on the Close REST API** when run from a Claude
-  Code web/remote session. Only the OAuth MCP connector is reachable, and
-  that connector does not expose recording objects.
-- Using the REST API would require adding `api.close.com` to the environment's
-  allowed hosts in the network policy. Until that happens, the REST route is
-  unavailable regardless of whether a valid key exists.
-- Therefore the **hybrid duration approach is the default design**, with the
-  REST path kept as an optional enhancement guarded behind a reachability
-  check that degrades gracefully rather than erroring.
