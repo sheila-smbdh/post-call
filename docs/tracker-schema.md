@@ -210,6 +210,21 @@ These are real, observed in the 5-lead sample. The skill must handle each.
    | Ari Brownstein | Sep 9 19:00 | 19:00:16 | +16s |
    | Kevin Gindi | Sep 10 20:00 | 20:00:57 | +57s |
 
+   Confirmed by direct negative test (2026-09-11): five leads Harry marked
+   `No Show/Cancel` fired the **same** flag at their scheduled time —
+
+   | Lead | Outcome | Fired |
+   |---|---|---|
+   | lead_hips… | No Show/Cancel | Sep 10 12:00:03 |
+   | Noreen Merchant | No Show/Cancel | Sep 10 18:00:07 |
+   | james ogburn | No Show/Cancel | Sep 8 17:00:42 |
+   | Dayton D | No Show/Cancel | Sep 5 15:00:04 |
+   | Nicole | No Show/Cancel | Sep 5 14:00:07 |
+
+   That is 10 for 10 — five calls that happened, five that did not, flag
+   identical for both. It carries **zero** information about attendance; it
+   records only that a call was booked.
+
    Never use lead status as the did-it-happen gate — every booked call passes,
    no-shows included. Use the **opportunity** status change instead.
 
