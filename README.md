@@ -8,10 +8,16 @@ Fourth skill, separate from `extract-pre-call-behaviors`,
 
 ---
 
-## Status — 2026-09-10
+## Status — 2026-09-11
 
 Design and feasibility work is **complete and verified against live data**.
-Implementation is **blocked on one environment change** (below).
+Implementation is **unblocked** for everything except one column.
+
+The eligibility gate no longer depends on call duration. It now reads
+closer-driven CRM state after the scheduled time, which the MCP connector
+serves — so the pilot can run without the REST API. Only **Actual Duration
+(col 7)** still needs it. See "Did the call happen?" in
+`docs/tracker-schema.md`.
 
 ### Settled
 
@@ -21,12 +27,17 @@ Implementation is **blocked on one environment change** (below).
 | Tracker location | New sheet "Closer Deep Dive Tracker", one tab per closer |
 | Deliverables | Narrative write-up + stats summary + published HTML report |
 | Duration source | Close REST API, nested Zoom integration data |
+| Eligibility gate | Opportunity status change, not duration (2026-09-11) |
 | Schema | 27 columns — see `docs/tracker-schema.md` |
 
-### Blocked on
+### Still blocked (col 7 only)
 
 **`api.close.com` must be added to the environment's network allowlist**, and
 the Close API key stored as the `CLOSE_API_KEY` environment variable.
+
+Note: this is the **environment's** egress policy, not Claude Code's
+permission allowlist. Re-verified 2026-09-11 — still a 403 at the CONNECT
+tunnel, while control hosts return 200.
 
 The egress proxy currently rejects `api.close.com:443` with a 403 at the
 CONNECT tunnel (organization policy). A control request to another host
@@ -78,9 +89,9 @@ Harry's user id: `user_f3vkQZe4xJvRsPV9L6cU1UOHk7nwxStq94aMqJYLqzm`
 
 ## Next steps once unblocked
 
-1. Verify `api.close.com` is reachable and `CLOSE_API_KEY` is set.
-2. Build extraction: opportunities → first-call meeting → Zoom timing →
-   activity trail split by `direction`.
+1. Build extraction: opportunities → first-call meeting → activity trail
+   split by `direction`. Apply the CRM-state gate for eligibility.
+2. Backfill Actual Duration (col 7) once `api.close.com` is reachable.
 3. Create "Closer Deep Dive Tracker" with a "Harry Whyte" tab, 27 columns.
 4. Run the five pilot leads.
 5. Produce the narrative write-up, stats summary, and HTML report.

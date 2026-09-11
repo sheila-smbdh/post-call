@@ -15,13 +15,59 @@ A lead enters the tracker only if **all** hold:
 
 1. Opportunity is in the Sales pipeline (`pipe_6BtcTllrXJwFF7nSvcRrLu`)
    and owned by the target closer.
-2. Stage is **not** `Discovery Call Scheduled` and **not** `No Show/Cancel`
-   — those leads have not had a call yet.
+2. Stage is **not** `Discovery Call Scheduled`, **not** `No Show/Cancel`,
+   and **not** `Reschedule Request` — those leads have not had a call yet.
 3. A meeting activity exists with the closer as `user_id`, in the past.
-4. The call is confirmed to have really happened (see Duration, below).
+4. The call is confirmed to have really happened — see
+   "Did the call happen?" below.
 
 Scope is the **first discovery call only**. Everything measured starts at
 that call. Earlier setter/intro-call activity is context, not measurement.
+
+---
+
+## Did the call happen?
+
+The eligibility gate rests on **closer-driven CRM state after the scheduled
+time**, not on call duration. Verified against all 5 pilot leads 2026-09-11.
+
+**Signal: the opportunity moves out of `Discovery Call Scheduled`.**
+
+| Moved to | Reading |
+|---|---|
+| `Next 7 Days`, `In Month Closing`, `Long Term w/ Intention`, `Long Term No Timeline`, `Long Term Farm`, `Split Pay/Deposit`, `Offer Not Presented`, `WON`, `LOST` | Call **happened** |
+| `No Show/Cancel`, `Reschedule Request` | Call **did not happen** |
+| Still `Discovery Call Scheduled` | Not yet actioned — exclude, do not assume |
+
+Both branches are live: Harry alone has 50 opportunities sitting in
+`No Show/Cancel` / `Reschedule Request`, so the gate genuinely discriminates.
+
+### Why this is trustworthy
+
+The move is human, and its timing tracks the real call:
+
+| Lead | Call start (UTC) | Moved | Lag | Actor |
+|---|---|---|---|---|
+| Will Morgan | Aug 31 21:00 | Sep 1 03:45:15 | +6h45m | **Helen Guo** |
+| Ming Su | Sep 3 17:00 | Sep 3 19:41:51 | +2h42m | Harry |
+| Anthony Mariani | Sep 4 13:00 | Sep 4 14:10:21 | +1h10m | Harry |
+| Ari Brownstein | Sep 9 19:00 | Sep 9 21:52:09 | +2h52m | Harry |
+| Kevin Gindi | Sep 10 20:00 | Sep 10 20:54:39 | +54m | Harry |
+
+Anthony is the control: his call ran 12:59:31 → 14:11:22 (71m51s, established
+via Zoom integration data). The stage moved at **14:10:21 — 61 seconds before
+the call ended**. Harry moved it while still on the call.
+
+**Record the actor and the lag on every row.** Will Morgan's move was made by
+Helen Guo at 11:45pm ET, ~7h after the call — not the closer, and not
+call-coupled. See trap 5.
+
+### What this changes
+
+Column 8 no longer means "qualified call (>15 min)". It means **the call
+occurred**. A short call that the closer moved straight to `LOST` now passes
+the gate. If a quality threshold is still wanted, it needs Actual Duration,
+which needs the REST API.
 
 ---
 
@@ -43,8 +89,8 @@ section with reasons, so nothing is silently dropped.
 |---|---|---|
 | 5 | Call Date + Time (ET) | meeting `starts_at` → America/New_York |
 | 6 | Scheduled Duration (min) | meeting `duration` / 60 |
-| 7 | **Actual Duration (min)** | zoom `end_time - start_time`, exact |
-| 8 | Qualified Call? (>15 min) | the eligibility gate |
+| 7 | Actual Duration (min) | zoom `end_time - start_time`, exact. REST API only — blocked |
+| 8 | **Call Happened?** | CRM-state gate — see below. Replaces the >15 min rule |
 | 9 | Verified Participants | zoom `participants`, de-duplicated by name |
 
 ### C. Outcome (3)
@@ -150,6 +196,28 @@ These are real, observed in the 5-lead sample. The skill must handle each.
 6. **Granola coverage is partial.** 3 of 5 sample calls had transcripts
    (Anthony, Kevin Gindi, Ari Brownstein); Ming Su and Will Morgan had none.
    Join is by lead name + ET datetime — there is no shared ID.
+
+7. **Lead status `Call in Progress` is automation, not evidence.** It is set
+   by a rule running under Jay DeCristofaro's account and fires at the
+   *scheduled* start time whether or not anyone joins. Across all 5 pilot
+   leads it landed 13–57s after the booked time:
+
+   | Lead | Scheduled | Fired | Lag |
+   |---|---|---|---|
+   | Will Morgan | Aug 31 21:00 | 21:00:13 | +13s |
+   | Ming Su | Sep 3 17:00 | 17:00:25 | +25s |
+   | Anthony Mariani | Sep 4 13:00 | 13:00:19 | +19s |
+   | Ari Brownstein | Sep 9 19:00 | 19:00:16 | +16s |
+   | Kevin Gindi | Sep 10 20:00 | 20:00:57 | +57s |
+
+   Never use lead status as the did-it-happen gate — every booked call passes,
+   no-shows included. Use the **opportunity** status change instead.
+
+8. **Closers do not write call notes in Close.** All 5 pilot leads have zero
+   `activity.note` records after their discovery call. Anthony's only note is
+   from 2026-08-22 by the *setter* (Jordan Kempster), about the intro call.
+   The call record lives in Granola. Do not expect notes to corroborate the
+   gate.
 
 ---
 
